@@ -1,6 +1,6 @@
 import { RefuelCard } from "@/components/RefuelCard";
+import { Header } from "@/components/Header";
 import heroBackground from "@/assets/hero-background.jpg";
-import { Sparkles } from "lucide-react";
 
 const Index = () => {
   return (
@@ -10,6 +10,9 @@ const Index = () => {
         background: 'var(--gradient-background)',
       }}
     >
+      {/* Header */}
+      <Header />
+      
       {/* Background Image */}
       <div 
         className="absolute inset-0 opacity-30"
@@ -25,17 +28,9 @@ const Index = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
       
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-12">
-        {/* Header */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-12 pt-24">
+        {/* Description */}
         <div className="text-center mb-12 space-y-4 max-w-3xl">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="h-8 w-8 text-accent animate-pulse" />
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-              RefuelX
-            </h1>
-            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-          </div>
-          
           <p className="text-xl md:text-2xl text-muted-foreground font-light">
             Unified Crosschain Gas Aggregator
           </p>
