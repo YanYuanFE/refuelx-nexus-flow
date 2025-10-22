@@ -10,50 +10,158 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, CheckCircle2, AlertCircle, Fuel } from "lucide-react";
-
-interface RefuelCardProps {}
+import { useAccount } from "wagmi";
+import {
+  MultiChainAssetSelector,
+  type MultiChainSelection,
+} from "@/components/MultiChainAssetSelector";
+import type {
+  BridgeParams,
+  BridgeResult,
+  NexusSDK,
+  UserAsset,
+} from "@avail-project/nexus-core";
 
 type TransactionStatus = "idle" | "quoting" | "executing" | "success" | "error";
 
-const CHAINS = [
-  { id: "ethereum", name: "Ethereum", icon: "⟠" },
-  { id: "arbitrum", name: "Arbitrum", icon: "🔷" },
-  { id: "optimism", name: "Optimism", icon: "🔴" },
-  { id: "polygon", name: "Polygon", icon: "🟣" },
-  { id: "starknet", name: "Starknet", icon: "⭐" },
-  { id: "base", name: "Base", icon: "🔵" },
-];
+const SUPPORTED_TOKENS = new Set(["eth", "usdc", "usdt"]);
 
-const TOKENS = [
-  { id: "usdc", name: "USDC", icon: "💵" },
-  { id: "usdt", name: "USDT", icon: "💲" },
-  { id: "eth", name: "ETH", icon: "⟠" },
-  { id: "dai", name: "DAI", icon: "🪙" },
-];
+export const RefuelCard = ({
+  balanceData,
+  sdk,
+}: {
+  balanceData: UserAsset[] | null;
+  sdk: NexusSDK | null;
+}) => {
+  const { address } = useAccount();
 
-export const RefuelCard = ({}: RefuelCardProps) => {
-  const [sourceChain, setSourceChain] = useState("");
-  const [token, setToken] = useState("");
+  const [sourceSelection, setSourceSelection] = useState<
+    MultiChainSelection | null
+  >(null);
   const [targetChain, setTargetChain] = useState("");
-  const [targetAddress, setTargetAddress] = useState("");
+  const [targetAddress, setTargetAddress] = useState(address || "");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<TransactionStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [transactionUrl, setTransactionUrl] = useState<string>("");
+
+  // Derive all chains from the balance data
+  const getAllChains = () => {
+    if (!balanceData) return [];
+
+    const chainMap = new Map();
+
+    balanceData.forEach((token) => {
+      token.breakdown.forEach((breakdown) => {
+        const chainKey = `${breakdown.chain.id}`;
+        if (!chainMap.has(chainKey)) {
+          chainMap.set(chainKey, {
+            id: breakdown.chain.id.toString(),
+            name: breakdown.chain.name,
+            logo: breakdown.chain.logo,
+          });
+        }
+      });
+    });
+
+    return Array.from(chainMap.values());
+  };
 
   const handleRefuel = async () => {
-    if (!sourceChain || !token || !targetChain || !targetAddress || !amount) {
+    if (
+      !sourceSelection ||
+      !targetChain ||
+      !targetAddress ||
+      !amount
+    ) {
       setStatus("error");
+      setErrorMessage("Please fill out all required fields");
       return;
     }
 
-    // Simulate transaction flow
-    setStatus("quoting");
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setStatus("executing");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    setStatus("success");
-    setTimeout(() => setStatus("idle"), 3000);
+    const normalizedToken = sourceSelection.assetSymbol?.toLowerCase?.() ?? "";
+    if (!SUPPORTED_TOKENS.has(normalizedToken)) {
+      setStatus("error");
+      setErrorMessage("Selected asset is not supported");
+      return;
+    }
+
+    // Validate amount
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setStatus("error");
+      setErrorMessage("Enter a valid amount");
+      return;
+    }
+
+    // Validate target address format
+    if (!targetAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+      setStatus("error");
+      setErrorMessage("Enter a valid wallet address");
+      return;
+    }
+
+    try {
+      // Clear previous error messages
+      setErrorMessage("");
+      setTransactionUrl("");
+
+      // Check if SDK is initialized
+      if (!sdk.isInitialized()) {
+        setStatus("error");
+        setErrorMessage("Nexus SDK is not initialized. Please connect your wallet");
+        console.error("Nexus SDK is not initialized");
+        return;
+      }
+
+      setStatus("quoting");
+
+      // Prepare bridge parameters according to the API
+      const bridgeParams: BridgeParams = {
+        token: sourceSelection.assetSymbol.toUpperCase() as any, // Convert to supported token format
+        amount: numAmount,
+        chainId: parseInt(targetChain) as any, // Target chain ID
+        // sourceChains is optional - SDK will automatically select optimal source
+      };
+
+      // First simulate the bridge to get quote information
+      const simulation = await sdk.simulateBridge(bridgeParams);
+      console.log("Bridge simulation:", simulation);
+
+      setStatus("executing");
+
+      // Execute the actual bridge transaction
+      const result: BridgeResult = await sdk.bridge(bridgeParams);
+
+      if (result.success) {
+        setStatus("success");
+        console.log("Bridge successful:", result);
+        if (result.explorerUrl) {
+          setTransactionUrl(result.explorerUrl);
+          console.log("Transaction URL:", result.explorerUrl);
+        }
+        // Reset form after successful transaction
+        setTimeout(() => {
+          setStatus("idle");
+          setSourceSelection(null);
+          setTargetChain("");
+          setAmount("");
+          setTransactionUrl("");
+        }, 5000); // Extended timeout to allow user to see the success message
+      } else {
+        setStatus("error");
+        setErrorMessage("Bridge transaction failed. Please try again");
+        console.error("Bridge failed");
+        setTimeout(() => setStatus("idle"), 3000);
+      }
+    } catch (error: any) {
+      setStatus("error");
+      const errorMsg =
+        error?.message || "Bridge transaction failed. Check your network connection and try again";
+      setErrorMessage(errorMsg);
+      console.error("Bridge transaction failed:", error);
+      setTimeout(() => setStatus("idle"), 3000);
+    }
   };
 
   const getStatusDisplay = () => {
@@ -69,21 +177,35 @@ export const RefuelCard = ({}: RefuelCardProps) => {
         return (
           <div className="flex items-center gap-2 text-primary">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Executing crosschain refuel...</span>
+            <span>Executing cross-chain bridge...</span>
           </div>
         );
       case "success":
         return (
-          <div className="flex items-center gap-2 text-green-400">
-            <CheckCircle2 className="h-4 w-4" />
-            <span>Refuel successful! ✅</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-green-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Bridge completed! ✅</span>
+            </div>
+            {transactionUrl && (
+              <div className="text-sm">
+                <a
+                  href={transactionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 underline"
+                >
+                  View transaction details &gt;
+                </a>
+              </div>
+            )}
           </div>
         );
       case "error":
         return (
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <span>Please fill all fields ❌</span>
+            <span>{errorMessage || "Something went wrong. Please try again"} ❌</span>
           </div>
         );
       default:
@@ -99,43 +221,14 @@ export const RefuelCard = ({}: RefuelCardProps) => {
           <Label htmlFor="source-chain" className="text-foreground font-medium">
             Source Chain
           </Label>
-          <Select value={sourceChain} onValueChange={setSourceChain}>
-            <SelectTrigger id="source-chain" className="glass-card border-border h-12">
-              <SelectValue placeholder="Select source chain" />
-            </SelectTrigger>
-            <SelectContent className="glass-card border-border">
-              {CHAINS.map((chain) => (
-                <SelectItem key={chain.id} value={chain.id} className="hover:bg-muted/50">
-                  <span className="flex items-center gap-2">
-                    <span>{chain.icon}</span>
-                    <span>{chain.name}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Token Selector */}
-        <div className="space-y-2">
-          <Label htmlFor="token" className="text-foreground font-medium">
-            Pay With
-          </Label>
-          <Select value={token} onValueChange={setToken}>
-            <SelectTrigger id="token" className="glass-card border-border h-12">
-              <SelectValue placeholder="Select token" />
-            </SelectTrigger>
-            <SelectContent className="glass-card border-border">
-              {TOKENS.map((token) => (
-                <SelectItem key={token.id} value={token.id} className="hover:bg-muted/50">
-                  <span className="flex items-center gap-2">
-                    <span>{token.icon}</span>
-                    <span>{token.name}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiChainAssetSelector
+            assetsData={balanceData}
+            value={sourceSelection}
+            onSelect={setSourceSelection}
+            disabled={!balanceData || balanceData.length === 0}
+            placeholder="Select source asset and chain"
+            triggerId="source-chain"
+          />
         </div>
 
         {/* Amount Input */}
@@ -159,14 +252,25 @@ export const RefuelCard = ({}: RefuelCardProps) => {
             Target Chain
           </Label>
           <Select value={targetChain} onValueChange={setTargetChain}>
-            <SelectTrigger id="target-chain" className="glass-card border-border h-12">
+            <SelectTrigger
+              id="target-chain"
+              className="glass-card border-border h-12"
+            >
               <SelectValue placeholder="Select target chain" />
             </SelectTrigger>
             <SelectContent className="glass-card border-border">
-              {CHAINS.map((chain) => (
-                <SelectItem key={chain.id} value={chain.id} className="hover:bg-muted/50">
+              {getAllChains().map((chain) => (
+                <SelectItem
+                  key={chain.id}
+                  value={chain.id}
+                  className="hover:bg-muted/50"
+                >
                   <span className="flex items-center gap-2">
-                    <span>{chain.icon}</span>
+                    <img
+                      src={chain.logo}
+                      alt={chain.name}
+                      className="w-4 h-4 rounded-full"
+                    />
                     <span>{chain.name}</span>
                   </span>
                 </SelectItem>
@@ -177,7 +281,10 @@ export const RefuelCard = ({}: RefuelCardProps) => {
 
         {/* Target Address */}
         <div className="space-y-2">
-          <Label htmlFor="target-address" className="text-foreground font-medium">
+          <Label
+            htmlFor="target-address"
+            className="text-foreground font-medium"
+          >
             Target Wallet Address
           </Label>
           <Input
