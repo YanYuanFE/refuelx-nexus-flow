@@ -36,9 +36,9 @@ export const Header = ({
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <Sparkles className="h-7 w-7 text-accent animate-pulse" />
+          <img src="/logo.png" alt="RefuelX" className="h-8 w-8" />
+
           <h1 className="text-3xl font-bold text-primary">RefuelX</h1>
-          <Sparkles className="h-7 w-7 text-primary animate-pulse" />
         </div>
 
         {/* Network Switch and Connect Wallet */}

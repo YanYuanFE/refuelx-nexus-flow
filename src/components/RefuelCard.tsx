@@ -136,14 +136,10 @@ export const RefuelCard = ({
           setTransactionUrl(result.explorerUrl);
           console.log("Transaction URL:", result.explorerUrl);
         }
-        // Reset form after successful transaction
-        setTimeout(() => {
-          setStatus("idle");
-          setSourceSelection(null);
-          setTargetChain("");
-          setAmount("");
-          setTransactionUrl("");
-        }, 5000); // Extended timeout to allow user to see the success message
+        setStatus("idle");
+        setSourceSelection(null);
+        setTargetChain("");
+        setAmount("");
       } else {
         setStatus("error");
         setErrorMessage("Bridge transaction failed. Please try again");
