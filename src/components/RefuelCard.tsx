@@ -136,7 +136,7 @@ export const RefuelCard = ({
           setTransactionUrl(result.explorerUrl);
           console.log("Transaction URL:", result.explorerUrl);
         }
-        setStatus("idle");
+
         setSourceSelection(null);
         setTargetChain("");
         setAmount("");
