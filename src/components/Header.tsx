@@ -37,9 +37,7 @@ export const Header = ({
         {/* Logo */}
         <div className="flex items-center gap-3">
           <Sparkles className="h-7 w-7 text-accent animate-pulse" />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-            RefuelX
-          </h1>
+          <h1 className="text-3xl font-bold text-primary">RefuelX</h1>
           <Sparkles className="h-7 w-7 text-primary animate-pulse" />
         </div>
 

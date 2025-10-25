@@ -1,5 +1,9 @@
 import "@rainbow-me/rainbowkit/styles.css";
-import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import {
+  getDefaultConfig,
+  lightTheme,
+  RainbowKitProvider,
+} from "@rainbow-me/rainbowkit";
 import { http, WagmiProvider } from "wagmi";
 import { mainnet, base } from "wagmi/chains";
 import type { ReactNode } from "react";
@@ -33,7 +37,11 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <RainbowKitProvider
+          theme={lightTheme({
+            accentColor: "#00BFFF",
+          })}
+        >
           <NexusProvider
             config={{
               debug: true, // true to view debug logs

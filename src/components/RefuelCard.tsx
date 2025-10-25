@@ -35,9 +35,8 @@ export const RefuelCard = ({
 }) => {
   const { address } = useAccount();
 
-  const [sourceSelection, setSourceSelection] = useState<
-    MultiChainSelection | null
-  >(null);
+  const [sourceSelection, setSourceSelection] =
+    useState<MultiChainSelection | null>(null);
   const [targetChain, setTargetChain] = useState("");
   const [targetAddress, setTargetAddress] = useState(address || "");
   const [amount, setAmount] = useState("");
@@ -68,12 +67,7 @@ export const RefuelCard = ({
   };
 
   const handleRefuel = async () => {
-    if (
-      !sourceSelection ||
-      !targetChain ||
-      !targetAddress ||
-      !amount
-    ) {
+    if (!sourceSelection || !targetChain || !targetAddress || !amount) {
       setStatus("error");
       setErrorMessage("Please fill out all required fields");
       return;
@@ -109,7 +103,9 @@ export const RefuelCard = ({
       // Check if SDK is initialized
       if (!sdk.isInitialized()) {
         setStatus("error");
-        setErrorMessage("Nexus SDK is not initialized. Please connect your wallet");
+        setErrorMessage(
+          "Nexus SDK is not initialized. Please connect your wallet"
+        );
         console.error("Nexus SDK is not initialized");
         return;
       }
@@ -157,7 +153,8 @@ export const RefuelCard = ({
     } catch (error: any) {
       setStatus("error");
       const errorMsg =
-        error?.message || "Bridge transaction failed. Check your network connection and try again";
+        error?.message ||
+        "Bridge transaction failed. Check your network connection and try again";
       setErrorMessage(errorMsg);
       console.error("Bridge transaction failed:", error);
       setTimeout(() => setStatus("idle"), 3000);
@@ -205,7 +202,9 @@ export const RefuelCard = ({
         return (
           <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <span>{errorMessage || "Something went wrong. Please try again"} ❌</span>
+            <span>
+              {errorMessage || "Something went wrong. Please try again"} ❌
+            </span>
           </div>
         );
       default:
@@ -301,7 +300,7 @@ export const RefuelCard = ({
         <Button
           onClick={handleRefuel}
           disabled={status === "quoting" || status === "executing"}
-          className="w-full h-14 text-lg font-semibold gradient-primary hover:opacity-90 transition-smooth glow-primary"
+          className="w-full h-14 text-lg font-semibold hover:opacity-90 transition-smooth glow-primary"
         >
           {status === "quoting" || status === "executing" ? (
             <Loader2 className="h-5 w-5 animate-spin mr-2" />
